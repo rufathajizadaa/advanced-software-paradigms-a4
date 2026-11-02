@@ -20,6 +20,12 @@ On Windows Command Prompt, use `mkdir build` instead of `mkdir -p build`.
 
 Replace `istanbul.jpg` with your filename and `20` with the square size. Use `S` for single-threaded mode or `M` for multithreaded mode.
 
+## Image Display
+
+Large images fit inside the screen when the window opens. Resizing the window keeps the image centered and preserves its proportions. Only the preview is scaled; the original image pixels stay unchanged.
+
+Both modes currently display the image only. Averaging, progressive updates, and saving will be added later.
+
 ## Request Validation
 
 The program checks the argument count, square size, processing mode, and input file.

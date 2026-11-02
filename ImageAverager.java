@@ -1,10 +1,13 @@
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 public class ImageAverager {
@@ -91,12 +94,44 @@ public class ImageAverager {
     }
 
     private static void showImage(BufferedImage image) {
-        JLabel imageLabel = new JLabel(new ImageIcon(image));
+        Rectangle screen = GraphicsEnvironment.getLocalGraphicsEnvironment()
+                .getMaximumWindowBounds();
+        int availableWidth = Math.max(1, screen.width - 100);
+        int availableHeight = Math.max(1, screen.height - 100);
+        double scale = Math.min(1.0, Math.min(
+                (double) availableWidth / image.getWidth(),
+                (double) availableHeight / image.getHeight()));
+
+        ImagePanel panel = new ImagePanel(image);
+        panel.setPreferredSize(new Dimension(
+                Math.max(1, (int) (image.getWidth() * scale)),
+                Math.max(1, (int) (image.getHeight() * scale))));
+
         JFrame window = new JFrame("Image Averager");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        window.add(imageLabel);
+        window.add(panel);
         window.pack();
         window.setLocationRelativeTo(null);
         window.setVisible(true);
+    }
+
+    private static class ImagePanel extends JPanel {
+        private final BufferedImage image;
+
+        ImagePanel(BufferedImage image) {
+            this.image = image;
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            super.paintComponent(graphics);
+            double scale = Math.min((double) getWidth() / image.getWidth(),
+                    (double) getHeight() / image.getHeight());
+            int width = Math.max(1, (int) (image.getWidth() * scale));
+            int height = Math.max(1, (int) (image.getHeight() * scale));
+            int x = (getWidth() - width) / 2;
+            int y = (getHeight() - height) / 2;
+            graphics.drawImage(image, x, y, width, height, null);
+        }
     }
 }
