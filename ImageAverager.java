@@ -27,22 +27,33 @@ public class ImageAverager {
             return;
         }
 
+        BufferedImage image;
         try {
-            BufferedImage image = ImageIO.read(file);
+            image = ImageIO.read(file);
             if (image == null) {
                 System.err.println("The file could not be read as an image.");
                 System.exit(1);
                 return;
             }
-
-            System.out.println("Image size: " + image.getWidth() + " x " + image.getHeight());
-            System.out.println("Square size: " + squareSize);
-            System.out.println("Mode: " + mode);
-            SwingUtilities.invokeLater(() -> showImage(image));
         } catch (IOException e) {
             System.err.println("Could not open image: " + file.getPath());
             System.exit(1);
+            return;
         }
+
+        System.out.println("Image size: " + image.getWidth() + " x " + image.getHeight());
+        System.out.println("Square size: " + squareSize);
+        System.out.println("Mode: " + mode);
+
+        try {
+            saveImage(image);
+        } catch (IOException e) {
+            System.err.println("Could not save result.jpg: " + e.getMessage());
+            System.exit(1);
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> showImage(image));
     }
 
     private static void validateArgumentCount(String[] args) {
@@ -91,6 +102,14 @@ public class ImageAverager {
         }
         
         return file;
+    }
+
+    private static void saveImage(BufferedImage image) throws IOException {
+        File output = new File("result.jpg");
+        if (!ImageIO.write(image, "jpg", output)) {
+            throw new IOException("No JPG writer is available.");
+        }
+        System.out.println("Saved image to result.jpg");
     }
 
     private static void showImage(BufferedImage image) {

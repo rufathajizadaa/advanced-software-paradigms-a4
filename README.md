@@ -8,7 +8,7 @@ Put your JPG image in the `input` folder.
 
 Using a separate `build` folder is suggested because it keeps compiled files separate from the source code and keeps the project clean.
 
-Run these commands from the `A4` folder:
+Run these commands from the project root folder:
 
 ```bash
 mkdir -p build
@@ -24,7 +24,17 @@ Replace `istanbul.jpg` with your filename and `20` with the square size. Use `S`
 
 Large images fit inside the screen when the window opens. Resizing the window keeps the image centered and preserves its proportions. Only the preview is scaled; the original image pixels stay unchanged.
 
-Both modes currently display the image only. Averaging, progressive updates, and saving will be added later.
+Both modes currently display and save the original image. Averaging and progressive updates will be added later.
+
+## Saving the Result
+
+The program saves the loaded image as `result.jpg` in the project root folder before opening the window. It keeps the original dimensions, regardless of the preview size. Each run replaces the previous result.
+
+After saving successfully, it prints:
+
+```text
+Saved image to result.jpg
+```
 
 ## Request Validation
 
