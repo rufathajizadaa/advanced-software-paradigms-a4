@@ -1,0 +1,4 @@
+build/
+*.class
+result.jpg
+.DS_Store
