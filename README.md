@@ -59,6 +59,36 @@ Saved image to result.jpg
 Processing complete.
 ```
 
+## Successful Runs
+
+Both modes completed with `istanbul.jpg` at 2240 x 1260 pixels and square size 20.
+
+Single-threaded mode:
+
+```text
+java -cp build ImageAverager istanbul.jpg 20 S
+Image size: 2240 x 1260
+Square size: 20
+Mode: S
+Saved image to result.jpg
+Processing complete.
+```
+
+Multithreaded mode:
+
+```text
+java -cp build ImageAverager istanbul.jpg 20 M
+Image size: 2240 x 1260
+Square size: 20
+Mode: M
+Available CPU cores: 10
+Processing threads: 10
+Saved image to result.jpg
+Processing complete.
+```
+
+The CPU core and thread counts depend on the computer and the number of square rows in the image.
+
 ## Request Validation
 
 The program checks the argument count, square size, processing mode, and input file.
