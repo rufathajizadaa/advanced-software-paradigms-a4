@@ -16,6 +16,12 @@ javac --release 17 -d build ImageAverager.java
 java -cp build ImageAverager istanbul.jpg 20 S
 ```
 
+To process regions in parallel:
+
+```bash
+java -cp build ImageAverager istanbul.jpg 20 M
+```
+
 On Windows Command Prompt, use `mkdir build` instead of `mkdir -p build`.
 
 Replace `istanbul.jpg` with your filename and `20` with the square size. Use `S` for single-threaded mode or `M` for multithreaded mode.
@@ -28,11 +34,19 @@ The window first shows the original image, then displays the averaging progress.
 
 ## Square Averaging
 
-`averageSquare` calculates the average red, green, and blue values of one square, then fills that square with the average color. Division uses whole numbers, so fractional values are rounded down. Squares at the image edges use only the pixels inside the image. The same method will be used in both processing modes.
+`averageSquare` calculates the average red, green, and blue values of one square, then fills that square with the average color. Division uses whole numbers, so fractional values are rounded down. Squares at the image edges use only the pixels inside the image. Both processing modes use this method.
 
 ## Single-Threaded Processing
 
-One processing thread handles squares from left to right, then top to bottom. Swing uses a separate thread for the window, so it can still be resized during processing. A short pause after each row makes progress visible. `synchronized` prevents drawing and updating the image pixels at the same time.
+One processing thread handles squares from left to right, then top to bottom. Swing uses a separate thread for the window, so it can still be resized during processing. A short pause after each row makes progress visible.
+
+## Multithreaded Processing
+
+`Runtime.getRuntime().availableProcessors()` provides the available CPU core count. The program uses that many workers, or fewer if there are fewer rows of squares. Each worker processes a separate horizontal region, from left to right and top to bottom. Regions start at square boundaries.
+
+Workers average private copies of their rows, so calculations run in parallel. Short `synchronized` blocks protect copying pixels to and from the shared image. Drawing uses the same lock. The program calls `join()` on every worker before saving. A worker error prevents saving an incomplete result.
+
+Both modes pause for 20 milliseconds after each row to make progress visible. These pauses are for visualization, so total runtime includes an artificial delay.
 
 ## Saving the Result
 

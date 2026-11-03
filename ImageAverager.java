@@ -28,11 +28,6 @@ public class ImageAverager {
             return;
         }
 
-        if (mode.equals("M")) {
-            System.exit(1);
-            return;
-        }
-
         BufferedImage image;
         try {
             image = ImageIO.read(file);
@@ -51,7 +46,7 @@ public class ImageAverager {
         System.out.println("Square size: " + squareSize);
         System.out.println("Mode: " + mode);
 
-        SwingUtilities.invokeLater(() -> showImage(image, squareSize));
+        SwingUtilities.invokeLater(() -> showImage(image, squareSize, mode));
     }
 
     private static void validateArgumentCount(String[] args) {
@@ -134,11 +129,82 @@ public class ImageAverager {
 
     private static void processSingleThreaded(BufferedImage image, int squareSize, ImagePanel panel)
             throws InterruptedException {
-        for (int y = 0; y < image.getHeight(); y += Math.min(squareSize, image.getHeight() - y)) {
-            for (int x = 0; x < image.getWidth(); x += Math.min(squareSize, image.getWidth() - x)) {
-                synchronized (image) {
-                    averageSquare(image, x, y, squareSize);
+        int squareRows = 1 + (image.getHeight() - 1) / squareSize;
+        processRows(image, squareSize, 0, squareRows, panel);
+    }
+
+    private static void processMultiThreaded(BufferedImage image, int squareSize, ImagePanel panel)
+            throws InterruptedException {
+        int squareRows = 1 + (image.getHeight() - 1) / squareSize;
+        int cpuCores = Runtime.getRuntime().availableProcessors();
+        int threadCount = Math.min(cpuCores, squareRows);
+        System.out.println("Available CPU cores: " + cpuCores);
+        System.out.println("Processing threads: " + threadCount);
+
+        Thread[] workers = new Thread[threadCount];
+        Exception[] workerErrors = new Exception[threadCount];
+        for (int i = 0; i < threadCount; i++) {
+            int workerIndex = i;
+            int firstRow = (int) ((long) i * squareRows / threadCount);
+            int endRow = (int) ((long) (i + 1) * squareRows / threadCount);
+            workers[i] = new Thread(() -> {
+                try {
+                    processRows(image, squareSize, firstRow, endRow, panel);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    workerErrors[workerIndex] = e;
+                } catch (RuntimeException e) {
+                    workerErrors[workerIndex] = e;
                 }
+            }, "image-worker-" + (i + 1));
+            workers[i].start();
+        }
+
+        try {
+            for (Thread worker : workers) {
+                worker.join();
+            }
+        } catch (InterruptedException e) {
+            for (Thread worker : workers) {
+                worker.interrupt();
+            }
+            throw e;
+        }
+
+        for (Exception error : workerErrors) {
+            if (error != null) {
+                throw new IllegalStateException("A processing worker failed. The result was not saved.", error);
+            }
+        }
+    }
+
+    private static void processRows(BufferedImage image, int squareSize, int firstRow, int endRow,
+            ImagePanel panel) throws InterruptedException {
+        int width = image.getWidth();
+        for (int row = firstRow; row < endRow; row++) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new InterruptedException();
+            }
+            int y = (int) ((long) row * squareSize);
+            int rowHeight = Math.min(squareSize, image.getHeight() - y);
+            int[] pixels;
+            synchronized (image) {
+                pixels = image.getRGB(0, y, width, rowHeight, null, 0, width);
+            }
+
+            // Calculate on a private copy so workers can run in parallel.
+            BufferedImage rowImage = new BufferedImage(width, rowHeight, BufferedImage.TYPE_INT_RGB);
+            rowImage.setRGB(0, 0, width, rowHeight, pixels, 0, width);
+            for (int x = 0; x < width; x += Math.min(squareSize, width - x)) {
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new InterruptedException();
+                }
+                averageSquare(rowImage, x, 0, squareSize);
+            }
+
+            pixels = rowImage.getRGB(0, 0, width, rowHeight, pixels, 0, width);
+            synchronized (image) {
+                image.setRGB(0, y, width, rowHeight, pixels, 0, width);
             }
             panel.repaint();
             Thread.sleep(20); // Keep the row-by-row progress visible.
@@ -153,7 +219,7 @@ public class ImageAverager {
         System.out.println("Saved image to result.jpg");
     }
 
-    private static void showImage(BufferedImage image, int squareSize) {
+    private static void showImage(BufferedImage image, int squareSize, String mode) {
         Rectangle screen = GraphicsEnvironment.getLocalGraphicsEnvironment()
                 .getMaximumWindowBounds();
         int availableWidth = Math.max(1, screen.width - 100);
@@ -175,15 +241,20 @@ public class ImageAverager {
         window.setVisible(true);
 
         Thread processingThread = new Thread(
-                () -> processAndSave(image, squareSize, panel, window), "image-processor");
+                () -> processAndSave(image, squareSize, mode, panel, window), "image-processor");
         processingThread.start();
     }
 
-    private static void processAndSave(BufferedImage image, int squareSize, ImagePanel panel, JFrame window) {
+    private static void processAndSave(BufferedImage image, int squareSize, String mode,
+            ImagePanel panel, JFrame window) {
         try {
             Thread.sleep(300); // Show the original image before processing starts.
             
-            processSingleThreaded(image, squareSize, panel);
+            if (mode.equals("S")) {
+                processSingleThreaded(image, squareSize, panel);
+            } else {
+                processMultiThreaded(image, squareSize, panel);
+            }
             saveImage(image);
             
             System.out.println("Processing complete.");
@@ -193,6 +264,10 @@ public class ImageAverager {
             System.err.println("Processing interrupted. The result was not saved.");
         } catch (IOException e) {
             System.err.println("Could not save result.jpg: " + e.getMessage());
+            SwingUtilities.invokeLater(() -> window.setTitle("Image Averager - Save Failed"));
+        } catch (RuntimeException e) {
+            System.err.println("Processing failed: " + e.getMessage());
+            SwingUtilities.invokeLater(() -> window.setTitle("Image Averager - Processing Failed"));
         }
     }
 
