@@ -22,18 +22,27 @@ Replace `istanbul.jpg` with your filename and `20` with the square size. Use `S`
 
 ## Image Display
 
-Large images fit inside the screen when the window opens. Resizing the window keeps the image centered and preserves its proportions. Only the preview is scaled; the original image pixels stay unchanged.
+Large images fit inside the screen when the window opens. Resizing the window keeps the image centered and preserves its proportions. Only the preview is scaled; averaging uses the original image resolution.
 
-Both modes currently display and save the original image. Averaging and progressive updates will be added later.
+The window first shows the original image, then displays the averaging progress. Wait for the window title to show "Complete" before closing it.
+
+## Square Averaging
+
+`averageSquare` calculates the average red, green, and blue values of one square, then fills that square with the average color. Division uses whole numbers, so fractional values are rounded down. Squares at the image edges use only the pixels inside the image. The same method will be used in both processing modes.
+
+## Single-Threaded Processing
+
+One processing thread handles squares from left to right, then top to bottom. Swing uses a separate thread for the window, so it can still be resized during processing. A short pause after each row makes progress visible. `synchronized` prevents drawing and updating the image pixels at the same time.
 
 ## Saving the Result
 
-The program saves the loaded image as `result.jpg` in the project root folder before opening the window. It keeps the original dimensions, regardless of the preview size. Each run replaces the previous result.
+After processing finishes, the program saves the averaged image as `result.jpg` in the project root folder. It keeps the original dimensions, regardless of the preview size. Each successful run replaces the previous result. Wait for completion before closing the window so the new result can be saved.
 
 After saving successfully, it prints:
 
 ```text
 Saved image to result.jpg
+Processing complete.
 ```
 
 ## Request Validation
